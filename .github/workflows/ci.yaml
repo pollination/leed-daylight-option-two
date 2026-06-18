@@ -13,7 +13,7 @@ jobs:
       - name: set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: "3.10"
+          python-version: '3.10'
       - name: set up node # we need node for for semantic release
         uses: actions/setup-node@v4
         with:
@@ -29,7 +29,7 @@ jobs:
         run: |
           nextRelease="`npx semantic-release@^23.1.1 --dryRun | grep -oP 'Published release \K.*? ' || true`"
           npx semantic-release@^23.1.1
-          echo "::set-output name=tag::$nextRelease"
+          echo "tag=$nextRelease" >> $GITHUB_OUTPUT
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PYPI_USERNAME: ${{ secrets.POLLINATION_PYPI_USERNAME }}
@@ -48,21 +48,23 @@ jobs:
       - name: set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: "3.10"
+          python-version: '3.12'
+      - name: install python dependencies
+        run: |
+          pip install -r dev-requirements.txt
+          pip install .
+      - name: deploy to staging
+        run: |
+          queenbee
+          pollination dsl push pollination-leed-daylight-option-two --tag ${{needs.deploy.outputs.tag}} -e https://api.staging.pollination.solutions -src https://api.staging.pollination.solutions/registries --push-dependencies
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          QB_POLLINATION_TOKEN: ${{ secrets.POLLINATION_STAGING_LADYBUGBOT_TOKEN }}
       - name: Set Tag
         id: set-tag
         run: |
           TAG=$(echo "${{ needs.deploy.outputs.tag }}" | sed 's/[[:space:]]//g')
-          echo "::set-output name=tag::$TAG"
-      - name: install python dependencies
-        run: pip install .
-      - name: deploy to staging
-        run: |
-          queenbee
-          pollination dsl push pollination-leed-daylight-option-two --tag ${{ steps.set-tag.outputs.tag }} -e https://api.staging.pollination.cloud -src https://api.staging.pollination.cloud/registries --push-dependencies
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          QB_POLLINATION_TOKEN: ${{ secrets.POLLINATION_STAGING_LADYBUGBOT_TOKEN }}
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
       - name: install python dependencies for samples
         run: pip install -r samples/requirements.txt
       - name: run on staging
@@ -70,7 +72,7 @@ jobs:
         env:
           QB_POLLINATION_TOKEN: ${{ secrets.POLLINATION_STAGING_LADYBUGBOT_TOKEN }}
           TAG: ${{ steps.set-tag.outputs.tag }}
-          HOST: https://api.staging.pollination.cloud
+          HOST: https://api.staging.pollination.solutions
 
   deploy-to-production:
     name: Deploy to Pollination Production
@@ -83,19 +85,21 @@ jobs:
       - name: set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: 3.7
+          python-version: '3.12'
       - name: Get Job Context
         id: get-context
         run: |
           TAG=$(git describe --tags | sed 's/v//')
           echo "Releasing tag: ${TAG:?}"
-          echo "::set-output name=tag::$TAG"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
       - name: install python dependencies
         run: |
-          pip install .
-          pip install -r requirements.txt
+          pip install -r dev-requirements.txt
+          pip install pollination-leed-daylight-option-two
       - name: deploy to production
         run: |
+          TAG=$(echo "${TAG:?}" | sed 's/[[:space:]]//g')
+          echo $TAG
           queenbee
           pollination dsl push pollination-leed-daylight-option-two --tag ${{steps.get-context.outputs.tag}} -e https://api.pollination.cloud -src https://api.pollination.cloud/registries --push-dependencies
         env:
