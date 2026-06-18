@@ -12,7 +12,7 @@ from pollination.alias.inputs.bool_options import glare_control_devices_input
 from pollination.alias.inputs.radiancepar import rad_par_leed_illuminance_input
 from pollination.alias.outputs.daylight import illuminance_9am_results, \
     illuminance_3pm_results, pass_fail_9am_results, pass_fail_3pm_results, \
-    pass_fail_comb_results, leed_ill_credit_summary_results
+    pass_fail_comb_results, leed_two_credit_summary, leed_two_summary_grid
 
 from .point_in_time._illuminance import PointInTimeGridEntryPoint
 from ._prepare_folder import LeedDaylightOptionTwoPrepareFolder
@@ -205,12 +205,13 @@ class LeedDaylightOptionTwoEntryPoint(DAG):
     space_summary = Outputs.file(
         description='CSV file containing the percentage of the sensor grid area in '
         'each space that meets the criteria.',
-        source='results/space_summary.csv'
+        source='results/space_summary.csv',
+        alias=leed_two_summary_grid
     )
 
     credit_summary = Outputs.file(
         description='JSON file containing the number of LEED credits achieved and '
         'a summary of the percentage of the sensor grid area that meets the criteria.',
         source='credit_summary.json',
-        alias=leed_ill_credit_summary_results
+        alias=leed_two_credit_summary
     )
